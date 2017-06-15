@@ -7,6 +7,10 @@ from collections import KeysView as AbstractKeysView
 from collections import ValuesView as AbstractValuesView
 from collections import ItemsView as AbstractItemsView
 from sys import hexversion
+from typing import (
+    Hashable, Any, Iterator, Iterable, Tuple, Type, Union, Callable, List,
+    overload
+)
 
 from .sortedlist import SortedList, recursive_repr, SortedListWithKey
 from .sortedset import SortedSet
@@ -17,18 +21,18 @@ NONE = object()
 class _IlocWrapper(object):
     "Positional indexing support for sorted dictionary objects."
     # pylint: disable=protected-access, too-few-public-methods
-    def __init__(self, _dict):
+    def __init__(self, _dict):  # type: (SortedDict) -> None
         self._dict = _dict
-    def __len__(self):
+    def __len__(self):  # type: () -> int
         return len(self._dict)
-    def __getitem__(self, index):
+    def __getitem__(self, index):   # type: (Union[int, slice]) -> Any
         """
         Very efficiently return the key at index *index* in iteration. Supports
         negative indices and slice notation. Raises IndexError on invalid
         *index*.
         """
         return self._dict._list[index]
-    def __delitem__(self, index):
+    def __delitem__(self, index):   # type: (Union[int, slice]) -> None
         """
         Remove the ``sdict[sdict.iloc[index]]`` from *sdict*. Supports negative
         indices and slice notation. Raises IndexError on invalid *index*.
@@ -152,12 +156,12 @@ class SortedDict(dict):
 
         self._update(*args, **kwargs)
 
-    def clear(self):
+    def clear(self):    # type: () -> None
         """Remove all elements from the dictionary."""
         self._clear()
         self._list_clear()
 
-    def __delitem__(self, key):
+    def __delitem__(self, key):     # type: (Hashable) -> None
         """
         Remove ``d[key]`` from *d*.  Raises a KeyError if *key* is not in the
         dictionary.
@@ -165,7 +169,7 @@ class SortedDict(dict):
         self._delitem(key)
         self._list_remove(key)
 
-    def __iter__(self):
+    def __iter__(self):     # type: () -> Iterator
         """
         Return an iterator over the sorted keys of the dictionary.
 
@@ -174,7 +178,7 @@ class SortedDict(dict):
         """
         return iter(self._list)
 
-    def __reversed__(self):
+    def __reversed__(self):     # type: () -> Iterator
         """
         Return a reversed iterator over the sorted keys of the dictionary.
 
@@ -183,13 +187,13 @@ class SortedDict(dict):
         """
         return reversed(self._list)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value):  # type: (Hashable, Any) -> None
         """Set `d[key]` to *value*."""
         if key not in self:
             self._list_add(key)
         self._setitem(key, value)
 
-    def copy(self):
+    def copy(self):     # type: () -> SortedDict
         """Return a shallow copy of the sorted dictionary."""
         return self.__class__(self._key, self._load, self._iteritems())
 
@@ -203,13 +207,13 @@ class SortedDict(dict):
         return cls((key, value) for key in seq)
 
     if hexversion < 0x03000000:
-        def items(self):
+        def items(self):    # type: () -> List[Tuple[Hashable, Any]]
             """
             Return a list of the dictionary's items (``(key, value)`` pairs).
             """
             return list(self._iteritems())
     else:
-        def items(self):
+        def items(self):    # type: () -> ItemsView
             """
             Return a new ItemsView of the dictionary's items.  In addition to
             the methods provided by the built-in `view` the ItemsView is
@@ -217,7 +221,7 @@ class SortedDict(dict):
             """
             return ItemsView(self)
 
-    def iteritems(self):
+    def iteritems(self):    # type: () -> Iterator[Tuple[Hashable, Any]]
         """
         Return an iterator over the items (``(key, value)`` pairs).
 
@@ -229,11 +233,11 @@ class SortedDict(dict):
     _iteritems = iteritems
 
     if hexversion < 0x03000000:
-        def keys(self):
+        def keys(self):     # type: () -> SortedSet
             """Return a SortedSet of the dictionary's keys."""
             return SortedSet(self._list, key=self._key, load=self._load)
     else:
-        def keys(self):
+        def keys(self):     # type: () -> KeysView
             """
             Return a new KeysView of the dictionary's keys.  In addition to the
             methods provided by the built-in `view` the KeysView is indexable
@@ -241,7 +245,7 @@ class SortedDict(dict):
             """
             return KeysView(self)
 
-    def iterkeys(self):
+    def iterkeys(self):     # type: () -> Iterator[Hashable]
         """
         Return an iterator over the sorted keys of the Mapping.
 
@@ -251,11 +255,11 @@ class SortedDict(dict):
         return iter(self._list)
 
     if hexversion < 0x03000000:
-        def values(self):
+        def values(self):   # type: () -> list
             """Return a list of the dictionary's values."""
             return list(self._itervalues())
     else:
-        def values(self):
+        def values(self):   # type: () -> ValuesView
             """
             Return a new :class:`ValuesView` of the dictionary's values.
             In addition to the methods provided by the built-in `view` the
@@ -263,7 +267,7 @@ class SortedDict(dict):
             """
             return ValuesView(self)
 
-    def itervalues(self):
+    def itervalues(self):   # type: () -> Iterator
         """
         Return an iterator over the values of the Mapping.
 
@@ -274,7 +278,7 @@ class SortedDict(dict):
 
     _itervalues = itervalues
 
-    def pop(self, key, default=NONE):
+    def pop(self, key, default=NONE):   # type: (Hashable, Any) -> Any
         """
         If *key* is in the dictionary, remove it and return its value,
         else return *default*. If *default* is not given and *key* is not in
@@ -289,7 +293,7 @@ class SortedDict(dict):
             else:
                 return default
 
-    def popitem(self, last=True):
+    def popitem(self, last=True):   # type: (bool) -> Tuple[Hashable, Any]
         """
         Remove and return a ``(key, value)`` pair from the dictionary. If
         last=True (default) then remove the *greatest* `key` from the
@@ -306,7 +310,7 @@ class SortedDict(dict):
 
         return (key, value)
 
-    def peekitem(self, index=-1):
+    def peekitem(self, index=-1):   # type: (int) -> Tuple[Hashable, Any]
         """Return (key, value) item pair at index.
 
         Unlike ``popitem``, the sorted dictionary is not modified. Index
@@ -319,7 +323,7 @@ class SortedDict(dict):
         key = self._list[index]
         return key, self[key]
 
-    def setdefault(self, key, default=None):
+    def setdefault(self, key, default=None):    # type: (Hashable, Any) -> Any
         """
         If *key* is in the dictionary, return its value.  If not, insert *key*
         with a value of *default* and return *default*.  *default* defaults to
@@ -332,7 +336,7 @@ class SortedDict(dict):
             self._list_add(key)
             return default
 
-    def update(self, *args, **kwargs):
+    def update(self, *args, **kwargs):  # type: (*Any, **Any) -> None
         """
         Update the dictionary with the key/value pairs from *other*, overwriting
         existing keys.
@@ -363,23 +367,24 @@ class SortedDict(dict):
     _update = update
 
     if hexversion >= 0x02070000:
-        def viewkeys(self):
+        def viewkeys(self):     # type: () -> KeysView
             "Return ``KeysView`` of dictionary keys."
             return KeysView(self)
 
-        def viewvalues(self):
+        def viewvalues(self):   # type: () -> ValuesView
             "Return ``ValuesView`` of dictionary values."
             return ValuesView(self)
 
-        def viewitems(self):
+        def viewitems(self):    # type: () -> ItemsView
             "Return ``ItemsView`` of dictionary (key, value) item pairs."
             return ItemsView(self)
 
     def __reduce__(self):
+        # type: () -> Tuple[Type, Tuple[Union[Callable, None], int, List[Tuple[Hashable, Any]]]]
         return (self.__class__, (self._key, self._load, list(self._iteritems())))
 
     @recursive_repr
-    def __repr__(self):
+    def __repr__(self):     # type: () -> str
         temp = '{0}({1}, {2}, {{{3}}})'
         items = ', '.join('{0}: {1}'.format(repr(key), repr(self[key]))
                           for key in self._list)
@@ -390,7 +395,7 @@ class SortedDict(dict):
             items
         )
 
-    def _check(self):
+    def _check(self):   # type: () -> None
         # pylint: disable=protected-access
         self._list._check()
         assert len(self) == len(self._list)
